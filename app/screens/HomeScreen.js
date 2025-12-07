@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { ref, update } from "firebase/database";
+import React, { useEffect, useState } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { auth, db } from '../../firebase/config';
+import GroupsScreen from './GroupsScreen';
 import Profile from './ProfileScreen';
 import Discussions from './UserListScreen';
-import GroupsScreen from './GroupsScreen'; 
-import { auth, db } from '../../firebase/config';
-import { ref, update } from "firebase/database";
 
 const Tab = createBottomTabNavigator();
 
@@ -44,16 +44,33 @@ export default function HomeScreen({ navigation }) {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, size, focused }) => {
           let iconName;
-          if (route.name === 'Discussions') iconName = 'chatbubbles-outline';
-          else if (route.name === 'Profile') iconName = 'person-outline';
-          else if (route.name === 'Groups') iconName = 'people-outline';
-          return <Icon name={iconName} size={size} color={color} />;
+          if (route.name === 'Discussions') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          else if (route.name === 'Groups') iconName = focused ? 'people' : 'people-outline';
+          return <Icon name={iconName} size={focused ? size + 2 : size} color={color} />;
         },
-        tabBarActiveTintColor: '#388E3C',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: { backgroundColor: '#E8F5E9' },
+        tabBarActiveTintColor: '#6366F1',
+        tabBarInactiveTintColor: '#94A3B8',
+        tabBarStyle: { 
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E2E8F0',
+          height: 65,
+          paddingBottom: 10,
+          paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: 4,
+        },
       })}
     >
       <Tab.Screen name="Discussions" component={Discussions} />

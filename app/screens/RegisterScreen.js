@@ -1,18 +1,18 @@
-import React, { useState } from "react";
-import {
-  Text,
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  ImageBackground,
-  SafeAreaView,
-  Alert,
-} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { auth, db } from '../../firebase/config';
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ref as dbRef, set } from "firebase/database";
+import React, { useState } from "react";
+import {
+    Alert,
+    ImageBackground,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { auth, db } from '../../firebase/config';
 
 export default function RegisterScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -172,10 +172,10 @@ export default function RegisterScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={styles.goBackButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.loginButtonText}>Go Back</Text>
+            <Text style={styles.goBackButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </ImageBackground>
@@ -188,23 +188,83 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   image: { justifyContent: 'center', flex: 1, width: '100%', height: '100%' },
   formContainer: {
-    marginHorizontal: 20,
-    backgroundColor: 'rgba(232,245,233,0.95)', 
-    borderRadius: 20,
-    padding: 20,
+    marginHorizontal: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+    borderRadius: 24,
+    padding: 28,
     shadowColor: "#000",
-    shadowOffset: { width:0,height:2 },
-    shadowOpacity:0.25,
-    shadowRadius:3.84,
-    elevation:5
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#2E7D32', marginBottom: 30, textAlign:'center' },
-  inputContainer: { flexDirection:'row', alignItems:'center', backgroundColor:'#C8E6C9', borderRadius:10, marginBottom:15, paddingHorizontal:15, borderWidth:1, borderColor:'#A5D6A7' },
-  inputIcon: { marginRight: 10 },
-  input: { flex:1, height:50, color:'#1B5E20', fontSize:16 },
-  eyeIcon: { padding:10 },
-  loginButton: { backgroundColor:'#388E3C', borderRadius:10, height:50, justifyContent:'center', alignItems:'center', marginTop:20 },
-  loginButtonText: { color:'#FFF', fontSize:18, fontWeight:'bold' },
-  goBackButton: { backgroundColor:'#A5D6A7', borderRadius:10, height:50, justifyContent:'center', alignItems:'center', marginTop:10 },
-  goBackButtonText: { color:'#1B5E20', fontSize:16, fontWeight:'bold' },
+  title: { 
+    fontSize: 32, 
+    fontWeight: '800', 
+    color: '#1A1A2E', 
+    marginBottom: 8, 
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  inputContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 16, 
+    marginBottom: 16, 
+    paddingHorizontal: 18, 
+    borderWidth: 1.5, 
+    borderColor: '#E2E8F0',
+    height: 56,
+  },
+  inputIcon: { 
+    marginRight: 12,
+    color: '#6366F1',
+  },
+  input: { 
+    flex: 1, 
+    height: 56, 
+    color: '#1E293B', 
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  eyeIcon: { 
+    padding: 8,
+  },
+  loginButton: { 
+    backgroundColor: '#6366F1', 
+    borderRadius: 16, 
+    height: 56, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginButtonText: { 
+    color: '#FFF', 
+    fontSize: 17, 
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  goBackButton: { 
+    backgroundColor: '#F1F5F9', 
+    borderRadius: 16, 
+    height: 56, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  goBackButtonText: { 
+    color: '#475569', 
+    fontSize: 16, 
+    fontWeight: '700',
+  },
 });

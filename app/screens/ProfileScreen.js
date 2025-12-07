@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  SafeAreaView,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  TextInput,
-  Button,
-  Switch,
-} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { auth, db } from '../../firebase/config';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { ref as dbRef, get, update, remove } from 'firebase/database';
 import { signOut } from 'firebase/auth';
+import { ref as dbRef, get, remove, update } from 'firebase/database';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Button,
+    Image,
+    Modal,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { auth, db } from '../../firebase/config';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState({
@@ -29,6 +28,19 @@ export default function ProfileScreen({ navigation }) {
   const [uploading, setUploading] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [image,setImage]=useState();
+
+  const uploadimageToSupabase = async (localURL)=> {
+    const reponse = await fetch(localURL);
+    const blob = await reponse.blob();
+    const arraybuffer =  await new Response(blob).arrayBuffer();
+    supabase.storage.from('les_images_de_profil').upload(currentUser.uid+ 'jpg',arraybuffer, {
+      upsert: true,
+    });
+    const {data} = supabase.storage.from('les_images_de_profil').getPublicUrl(currentUser.uid+'jpg');
+    return data.publicUrl;
+  }
+
 
   useEffect(() => {
     const userRef = dbRef(db, `users/${auth.currentUser.uid}`);
@@ -193,96 +205,124 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#E8F5E9', 
+    backgroundColor: '#F8FAFC', 
     paddingTop: 20,
   },
 
   profileContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     width: '90%',
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 15,
+    padding: 28,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     marginTop: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   profileImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    marginBottom: 15,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: '#E2E8F0',
   },
 
   uploadButton: {
-    width: 130,
-    height: 130,
+    width: 140,
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#C8E6C9',
-    borderRadius: 65,
-    marginBottom: 15,
+    backgroundColor: '#6366F1',
+    borderRadius: 70,
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: '#E2E8F0',
   },
 
   uploadText: {
-    color: '#2E7D32',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontWeight: '700',
     textAlign: 'center',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
 
   uploadingText: {
-    color: '#2E7D32',
+    color: '#6366F1',
     fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 12,
+    fontSize: 14,
   },
 
   profileText: {
     fontSize: 16,
-    marginBottom: 8,
-    color: '#1B5E20',
+    marginBottom: 12,
+    color: '#475569',
+    fontWeight: '500',
+    width: '100%',
+    textAlign: 'left',
+    paddingHorizontal: 4,
   },
 
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 20,
+    marginTop: 24,
+    gap: 8,
   },
 
   editButton: {
     flex: 1,
-    backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 5,
-    marginRight: 5,
+    backgroundColor: '#6366F1',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   deleteButton: {
     flex: 1,
-    backgroundColor: '#D32F2F',
-    padding: 12,
-    borderRadius: 5,
-    marginHorizontal: 5,
+    backgroundColor: '#EF4444',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   logoutButtonInline: {
     flex: 1,
-    backgroundColor: '#388E3C',
-    padding: 12,
-    borderRadius: 5,
-    marginLeft: 5,
+    backgroundColor: '#64748B',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
 
   toggleContainer: {
@@ -291,15 +331,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: 25,
-    padding: 15,
-    backgroundColor: '#C8E6C9',
-    borderRadius: 10,
+    padding: 18,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   toggleLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1B5E20',
+    fontWeight: '600',
+    color: '#1E293B',
   },
 
   modalOverlay: {
@@ -311,51 +353,60 @@ const styles = StyleSheet.create({
 
   modalContainer: {
     width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#1B5E20',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 20,
+    color: '#1A1A2E',
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
 
   input: {
     width: '100%',
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 12,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '500',
   },
 
   modalButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 8,
+    gap: 12,
   },
 
   logoutButton: {
-    backgroundColor: '#388E3C',
-    padding: 12,
-    borderRadius: 5,
+    backgroundColor: '#64748B',
+    padding: 14,
+    borderRadius: 12,
     width: '100%',
-    marginTop: 15,
+    marginTop: 16,
   },
 
   logoutText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
+    fontSize: 16,
   },
 });
