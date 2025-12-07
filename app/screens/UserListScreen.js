@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
     FlatList,
     Image,
+    ImageBackground,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -42,7 +43,12 @@ export default function UsersListScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require('../../assets/bg.jpg')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
       <Text style={styles.title}>Liste des utilisateurs</Text>
 
       <FlatList
@@ -77,7 +83,7 @@ export default function UsersListScreen({ navigation }) {
 )}
 
       />
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -85,33 +91,38 @@ export default function UsersListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
     padding: 16,
     paddingTop: 60,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(232, 213, 242, 0.85)',
   },
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#1A1A2E",
+    color: "#6B4C7A",
     marginBottom: 24,
     textAlign: "left",
     paddingHorizontal: 4,
     letterSpacing: -0.5,
+    zIndex: 1,
   },
   userItem: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     marginBottom: 12,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderWidth: 2,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
+    zIndex: 1,
   },
   avatar: {
     width: 56,
@@ -119,13 +130,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     marginRight: 16,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: "rgba(212, 181, 232, 0.6)",
   },
   avatarPlaceholder: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#C8A2C8",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -140,20 +151,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#6B4C7A",
     letterSpacing: -0.2,
   },
   chatButton: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#C8A2C8",
     width: 48,
     height: 48,
     borderRadius: 24,
     marginLeft: "auto",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#6366F1",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -164,8 +175,9 @@ const styles = StyleSheet.create({
   empty: {
     textAlign: "center",
     marginTop: 80,
-    color: "#94A3B8",
+    color: "#B19BC8",
     fontSize: 16,
     fontWeight: "500",
+    zIndex: 1,
   },
 });

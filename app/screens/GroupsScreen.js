@@ -5,6 +5,7 @@ import {
     Alert,
     FlatList,
     Image,
+    ImageBackground,
     Modal,
     ScrollView,
     StyleSheet,
@@ -117,7 +118,12 @@ export default function GroupsScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require('../../assets/bg.jpg')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
       <Text style={styles.title}>Mes Groupes</Text>
 
       <FlatList
@@ -144,7 +150,7 @@ export default function GroupsScreen({ navigation }) {
               value={groupName}
               onChangeText={setGroupName}
               style={styles.input}
-              placeholderTextColor="#2E7D32"
+              placeholderTextColor="#B19BC8"
             />
 
             <Text style={styles.modalSubtitle}>Sélectionner les membres :</Text>
@@ -186,45 +192,49 @@ export default function GroupsScreen({ navigation }) {
               onPress={() => setModalVisible(false)}
               style={styles.closeModal}
             >
-              <MaterialIcons name="close" size={28} color="#2E7D32" />
+              <MaterialIcons name="close" size={28} color="#6B4C7A" />
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#F8FAFC", 
     paddingTop: 60,
     paddingHorizontal: 16,
   },
-
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(232, 213, 242, 0.85)',
+  },
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#1A1A2E",
+    color: "#6B4C7A",
     marginBottom: 24,
     textAlign: "left",
     paddingHorizontal: 4,
     letterSpacing: -0.5,
+    zIndex: 1,
   },
 
   groupCard: {
     padding: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     marginBottom: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
+    zIndex: 1,
   },
 
   groupInfo: { 
@@ -236,18 +246,18 @@ const styles = StyleSheet.create({
     height: 56, 
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: "rgba(212, 181, 232, 0.6)",
   },
   groupName: {
     marginLeft: 16,
     fontSize: 18,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#6B4C7A",
     letterSpacing: -0.3,
   },
   subText: { 
     fontSize: 13, 
-    color: "#64748B",
+    color: "#B19BC8",
     marginTop: 4,
   },
 
@@ -257,35 +267,36 @@ const styles = StyleSheet.create({
     right: 20,
     width: 64,
     height: 64,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#C8A2C8",
     borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
     elevation: 8,
-    shadowColor: "#6366F1",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 12,
+    zIndex: 10,
   },
 
   modalBackground: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(107, 76, 122, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
 
   modalContainer: {
     width: "90%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
+    borderRadius: 28,
     padding: 24,
     maxHeight: "80%",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderWidth: 2,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     elevation: 12,
   },
@@ -293,7 +304,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#1A1A2E",
+    color: "#6B4C7A",
     marginBottom: 20,
     textAlign: "center",
     letterSpacing: -0.5,
@@ -303,33 +314,33 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: "700",
-    color: "#475569",
+    color: "#6B4C7A",
     marginBottom: 12,
   },
 
   input: {
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+    borderRadius: 20,
     padding: 16,
     marginTop: 12,
-    backgroundColor: "#F8FAFC",
-    color: "#1E293B",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    color: "#6B4C7A",
     fontSize: 16,
     fontWeight: "500",
   },
 
   userCard: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: 8,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderWidth: 2,
+    borderColor: "rgba(212, 181, 232, 0.5)",
   },
   selectedUser: { 
-    backgroundColor: "#EEF2FF",
-    borderColor: "#6366F1",
+    backgroundColor: "rgba(232, 213, 242, 0.6)",
+    borderColor: "#C8A2C8",
     borderWidth: 2,
   },
 
@@ -342,12 +353,12 @@ const styles = StyleSheet.create({
     height: 48, 
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: "rgba(212, 181, 232, 0.6)",
   },
   userName: { 
     marginLeft: 12, 
     fontSize: 16, 
-    color: "#1E293B",
+    color: "#6B4C7A",
     fontWeight: "600",
   },
 
@@ -361,7 +372,7 @@ const styles = StyleSheet.create({
     top: 20, 
     right: 20,
     padding: 8,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "rgba(232, 213, 242, 0.6)",
     borderRadius: 20,
   },
 });

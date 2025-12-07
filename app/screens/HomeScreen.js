@@ -51,19 +51,19 @@ export default function HomeScreen({ navigation }) {
           else if (route.name === 'Groups') iconName = focused ? 'people' : 'people-outline';
           return <Icon name={iconName} size={focused ? size + 2 : size} color={color} />;
         },
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: '#C8A2C8',
+        tabBarInactiveTintColor: '#B19BC8',
         tabBarStyle: { 
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E2E8F0',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderTopWidth: 2,
+          borderTopColor: 'rgba(212, 181, 232, 0.5)',
           height: 65,
           paddingBottom: 10,
           paddingTop: 8,
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: '#C8A2C8',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.2,
           shadowRadius: 8,
         },
         tabBarLabelStyle: {

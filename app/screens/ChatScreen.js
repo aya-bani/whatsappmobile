@@ -1,8 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { off, onValue, push, ref, serverTimestamp } from "firebase/database";
+import * as ImagePicker from 'expo-image-picker';
+import { set as dbSet, off, onValue, push, ref, serverTimestamp } from "firebase/database";
+import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import React, { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     FlatList,
+    Image,
+    ImageBackground,
     Platform,
     StyleSheet,
     Text,
@@ -10,20 +16,25 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { auth, db } from "../../firebase/config";
+import { auth, db, storage } from "../../firebase/config";
 
 export default function ChatScreen({ route, navigation }) {
   const { chatId, chatUser } = route.params || {};
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const flatListRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   const user = auth.currentUser;
 
   useEffect(() => {
     if (!chatId) return;
     const messagesRef = ref(db, `chats/${chatId}/messages`);
+    const typingRef = ref(db, `chats/${chatId}/typing`);
 
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
+    const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val() || {};
       const parsed = Object.entries(data).map(([id, value]) => ({ id, ...value }));
       parsed.sort((a, b) => a.createdAt - b.createdAt);
@@ -34,8 +45,48 @@ export default function ChatScreen({ route, navigation }) {
       }, 200);
     });
 
-    return () => off(messagesRef);
+    const unsubscribeTyping = onValue(typingRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const otherUserId = Object.keys(data).find(uid => uid !== user.uid);
+      if (otherUserId && data[otherUserId]) {
+        setOtherUserTyping(true);
+        setTimeout(() => setOtherUserTyping(false), 3000);
+      }
+    });
+
+    return () => {
+      off(messagesRef);
+      off(typingRef);
+    };
   }, [chatId]);
+
+  useEffect(() => {
+    if (!chatId || !newMessage) {
+      if (isTyping) {
+        dbSet(ref(db, `chats/${chatId}/typing/${user.uid}`), false);
+        setIsTyping(false);
+      }
+      return;
+    }
+
+    dbSet(ref(db, `chats/${chatId}/typing/${user.uid}`), true);
+    setIsTyping(true);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      dbSet(ref(db, `chats/${chatId}/typing/${user.uid}`), false);
+      setIsTyping(false);
+    }, 1000);
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [newMessage]);
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -47,11 +98,56 @@ export default function ChatScreen({ route, navigation }) {
       createdAt: serverTimestamp(),
     });
 
+    dbSet(ref(db, `chats/${chatId}/typing/${user.uid}`), false);
+    setIsTyping(false);
     setNewMessage("");
   };
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Permission to access gallery is required!');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri) => {
+    setUploading(true);
+    try {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      const fileRef = storageRef(storage, `chat-images/${chatId}/${Date.now()}.jpg`);
+      await uploadBytes(fileRef, blob);
+      const imageUrl = await getDownloadURL(fileRef);
+      
+      const messagesRef = ref(db, `chats/${chatId}/messages`);
+      await push(messagesRef, {
+        imageUrl: imageUrl,
+        sender: user.uid,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require('../../assets/bg.jpg')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
@@ -109,20 +205,46 @@ export default function ChatScreen({ route, navigation }) {
                   isMe ? styles.myBubble : styles.theirBubble,
                 ]}
               >
-                <Text style={[styles.messageText, isMe && styles.myMessageText]}>
-                  {item.text}
-                </Text>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.messageImage} />
+                ) : null}
+                {item.text ? (
+                  <Text style={[styles.messageText, isMe && styles.myMessageText]}>
+                    {item.text}
+                  </Text>
+                ) : null}
               </View>
             </View>
           );
         }}
       />
 
+      {otherUserTyping && (
+        <View style={styles.typingIndicator}>
+          <View style={styles.typingBubble}>
+            <Text style={styles.typingText}>
+              {chatUser?.name ?? chatUser?.pseudo ?? "Someone"} is typing...
+            </Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
+          <TouchableOpacity 
+            style={styles.photoButton}
+            onPress={pickImage}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <ActivityIndicator size="small" color="#C8A2C8" />
+            ) : (
+              <Ionicons name="camera" size={24} color="#C8A2C8" />
+            )}
+          </TouchableOpacity>
           <TextInput
             placeholder="Type a message..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#D4B5E8"
             value={newMessage}
             onChangeText={setNewMessage}
             style={styles.input}
@@ -137,32 +259,35 @@ export default function ChatScreen({ route, navigation }) {
             <Ionicons 
               name="send" 
               size={20} 
-              color={newMessage.trim() ? "#FFFFFF" : "#CBD5E1"} 
+              color={newMessage.trim() ? "#FFFFFF" : "#E8D5F2"} 
             />
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
-    flex: 1, 
-    backgroundColor: "#F8FAFC",
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(232, 213, 242, 0.85)',
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     paddingVertical: 16,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 50 : 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderBottomColor: "rgba(200, 162, 200, 0.3)",
+    shadowColor: "#C8A2C8",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
@@ -177,7 +302,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#C8A2C8",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -190,13 +315,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: { 
-    color: "#1A1A2E", 
+    color: "#6B4C7A", 
     fontSize: 18, 
     fontWeight: "700",
     letterSpacing: -0.3,
   },
   headerSubtitle: {
-    color: "#64748B",
+    color: "#B19BC8",
     fontSize: 13,
     marginTop: 2,
     fontWeight: "500",
@@ -211,7 +336,7 @@ const styles = StyleSheet.create({
   messageWrapper: { 
     flexDirection: "row", 
     alignItems: "flex-end", 
-    marginVertical: 4,
+    marginVertical: 6,
   },
   myMessageWrapper: { 
     justifyContent: "flex-end",
@@ -223,7 +348,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#818CF8",
+    backgroundColor: "#D4B5E8",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
@@ -238,42 +363,66 @@ const styles = StyleSheet.create({
     maxWidth: "75%", 
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 20,
+    borderRadius: 24,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
+        shadowColor: "#C8A2C8",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
       },
       android: {
-        elevation: 2,
+        elevation: 3,
       },
     }),
   },
   myBubble: { 
-    backgroundColor: "#6366F1",
-    borderBottomRightRadius: 6,
+    backgroundColor: "#C8A2C8",
+    borderBottomRightRadius: 8,
   },
   theirBubble: { 
-    backgroundColor: "#FFFFFF",
-    borderBottomLeftRadius: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderBottomLeftRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(212, 181, 232, 0.5)",
   },
   messageText: { 
     fontSize: 15, 
-    color: "#1E293B",
+    color: "#6B4C7A",
     lineHeight: 20,
     fontWeight: "400",
   },
   myMessageText: {
     color: "#FFFFFF",
   },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  typingIndicator: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  typingBubble: {
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    borderWidth: 1.5,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+  },
+  typingText: {
+    color: "#B19BC8",
+    fontSize: 13,
+    fontStyle: "italic",
+  },
   inputContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    borderTopColor: "rgba(200, 162, 200, 0.3)",
     paddingVertical: 12,
     paddingHorizontal: 16,
     paddingBottom: Platform.OS === 'ios' ? 30 : 12,
@@ -281,12 +430,21 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "flex-end",
-    backgroundColor: "#F1F5F9",
-    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 28,
     paddingHorizontal: 4,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "rgba(212, 181, 232, 0.5)",
+  },
+  photoButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 4,
+    backgroundColor: "rgba(232, 213, 242, 0.5)",
   },
   input: { 
     flex: 1, 
@@ -295,7 +453,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     fontSize: 15,
-    color: "#1E293B",
+    color: "#6B4C7A",
     maxHeight: 100,
     ...Platform.select({
       ios: {
@@ -304,16 +462,21 @@ const styles = StyleSheet.create({
     }),
   },
   sendButton: { 
-    backgroundColor: "#6366F1",
+    backgroundColor: "#C8A2C8",
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 4,
+    shadowColor: "#C8A2C8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sendButtonDisabled: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: "#E8D5F2",
   },
 });
  

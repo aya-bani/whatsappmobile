@@ -7,6 +7,7 @@ import {
     Alert,
     Button,
     Image,
+    ImageBackground,
     Modal,
     SafeAreaView,
     StyleSheet,
@@ -145,10 +146,14 @@ export default function ProfileScreen({ navigation }) {
  
 
   return (
-    <SafeAreaView style={styles.container}>
-      
-
-      <View style={styles.profileContainer}>
+    <ImageBackground 
+      source={require('../../assets/bg.jpg')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.profileContainer}>
         <TouchableOpacity onPress={pickImage}>
           {userData.profileImage ? (
             <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
@@ -191,40 +196,46 @@ export default function ProfileScreen({ navigation }) {
             <TextInput style={styles.input} placeholder="Phone" value={userData.phone} onChangeText={(text) => setUserData({ ...userData, phone: text })}/>
             <TextInput style={styles.input} placeholder="Pseudo" value={userData.pseudo} onChangeText={(text) => setUserData({ ...userData, pseudo: text })}/>
             <View style={styles.modalButtonRow}>
-              <Button title="Save" color="#4CAF50" onPress={handleEditProfile}/>
-              <Button title="Cancel" color="#9E9E9E" onPress={() => setIsEditModalVisible(false)}/>
+              <Button title="Save" color="#C8A2C8" onPress={handleEditProfile}/>
+              <Button title="Cancel" color="#B19BC8" onPress={() => setIsEditModalVisible(false)}/>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(232, 213, 242, 0.85)',
+  },
+  safeArea: {
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC', 
     paddingTop: 20,
   },
-
   profileContainer: {
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
     width: '90%',
     padding: 28,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 28,
     marginTop: 20,
-    shadowColor: '#000',
+    shadowColor: '#C8A2C8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 2,
+    borderColor: 'rgba(212, 181, 232, 0.5)',
   },
 
   profileImage: {
@@ -233,7 +244,7 @@ const styles = StyleSheet.create({
     borderRadius: 70,
     marginBottom: 20,
     borderWidth: 4,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(212, 181, 232, 0.6)',
   },
 
   uploadButton: {
@@ -241,11 +252,11 @@ const styles = StyleSheet.create({
     height: 140,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#6366F1',
+    backgroundColor: '#C8A2C8',
     borderRadius: 70,
     marginBottom: 20,
     borderWidth: 4,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(212, 181, 232, 0.6)',
   },
 
   uploadText: {
@@ -257,7 +268,7 @@ const styles = StyleSheet.create({
   },
 
   uploadingText: {
-    color: '#6366F1',
+    color: '#C8A2C8',
     fontWeight: '600',
     marginBottom: 12,
     fontSize: 14,
@@ -266,7 +277,7 @@ const styles = StyleSheet.create({
   profileText: {
     fontSize: 16,
     marginBottom: 12,
-    color: '#475569',
+    color: '#6B4C7A',
     fontWeight: '500',
     width: '100%',
     textAlign: 'left',
@@ -283,36 +294,36 @@ const styles = StyleSheet.create({
 
   editButton: {
     flex: 1,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#C8A2C8',
     padding: 14,
-    borderRadius: 12,
-    shadowColor: '#6366F1',
+    borderRadius: 16,
+    shadowColor: '#C8A2C8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },
 
   deleteButton: {
     flex: 1,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#E8A5C8',
     padding: 14,
-    borderRadius: 12,
-    shadowColor: '#EF4444',
+    borderRadius: 16,
+    shadowColor: '#E8A5C8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },
 
   logoutButtonInline: {
     flex: 1,
-    backgroundColor: '#64748B',
+    backgroundColor: '#B19BC8',
     padding: 14,
-    borderRadius: 12,
-    shadowColor: '#64748B',
+    borderRadius: 16,
+    shadowColor: '#B19BC8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -332,44 +343,44 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 25,
     padding: 18,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(212, 181, 232, 0.5)',
   },
 
   toggleLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#6B4C7A',
   },
 
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(107, 76, 122, 0.5)',
   },
 
   modalContainer: {
     width: '85%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 28,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: '#C8A2C8',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     elevation: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 2,
+    borderColor: 'rgba(212, 181, 232, 0.5)',
   },
 
   modalTitle: {
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 20,
-    color: '#1A1A2E',
+    color: '#6B4C7A',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -377,14 +388,14 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     height: 52,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(212, 181, 232, 0.5)',
+    borderRadius: 16,
     paddingHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     fontSize: 16,
-    color: '#1E293B',
+    color: '#6B4C7A',
     fontWeight: '500',
   },
 
@@ -396,9 +407,9 @@ const styles = StyleSheet.create({
   },
 
   logoutButton: {
-    backgroundColor: '#64748B',
+    backgroundColor: '#B19BC8',
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 16,
     width: '100%',
     marginTop: 16,
   },
