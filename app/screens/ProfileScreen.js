@@ -36,7 +36,6 @@ export default function ProfileScreen({ navigation }) {
   const [deletePassword, setDeletePassword] = useState('');
   const [isActive, setIsActive] = useState(false);
 
-  // Function to upload image to Supabase
   const uploadImageToSupabase = async (localURL) => {
     try {
       const response = await fetch(localURL);
@@ -105,10 +104,8 @@ export default function ProfileScreen({ navigation }) {
   const uploadProfilePicture = async (imageUri) => {
     setUploading(true);
     try {
-      // Upload to Supabase
       const imageUrl = await uploadImageToSupabase(imageUri);
       
-      // Update Firebase database with new image URL
       await update(dbRef(db, `users/${auth.currentUser.uid}`), { 
         profileImage: imageUrl 
       });

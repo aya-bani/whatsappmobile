@@ -2,19 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
 import { set as dbSet, off, onValue, push, ref, serverTimestamp } from "firebase/database";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    ImageBackground,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  ImageBackground,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { auth, db, storage } from "../../firebase/config";
 
@@ -48,15 +48,22 @@ export default function ChatScreen({ route, navigation }) {
     const unsubscribeTyping = onValue(typingRef, (snapshot) => {
       const data = snapshot.val() || {};
       const otherUserId = Object.keys(data).find(uid => uid !== user.uid);
+
       if (otherUserId && data[otherUserId]) {
         setOtherUserTyping(true);
-        setTimeout(() => setOtherUserTyping(false), 3000);
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        typingTimeoutRef.current = setTimeout(() => {
+          setOtherUserTyping(false);
+        }, 2000);
       }
     });
 
     return () => {
       off(messagesRef);
       off(typingRef);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [chatId]);
 
@@ -129,28 +136,20 @@ export default function ChatScreen({ route, navigation }) {
   const uploadImage = async (imageUri) => {
     setUploading(true);
     try {
-      // Fetch the image as a blob
       const response = await fetch(imageUri);
       const blob = await response.blob();
-      
-      // Create a unique filename
       const filename = `chat-images/${chatId}/${Date.now()}.jpg`;
       const fileRef = storageRef(storage, filename);
-      
-      // Upload the blob
       await uploadBytes(fileRef, blob);
-      
-      // Get the download URL
       const imageUrl = await getDownloadURL(fileRef);
-      
-      // Save message with image URL to database
+
       const messagesRef = ref(db, `chats/${chatId}/messages`);
       await push(messagesRef, {
         imageUrl: imageUrl,
         sender: user.uid,
         createdAt: serverTimestamp(),
       });
-      
+
       Alert.alert('Success', 'Image sent successfully!');
     } catch (error) {
       console.error('Upload error:', error);
@@ -310,196 +309,37 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  backButton: {
-    marginRight: 12,
-    padding: 4,
-  },
-  headerAvatar: {
-    marginRight: 12,
-  },
+  backButton: { marginRight: 12, padding: 4 },
+  headerAvatar: { marginRight: 12 },
   avatarCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#C8A2C8",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 42, height: 42, borderRadius: 21, backgroundColor: "#C8A2C8",
+    justifyContent: "center", alignItems: "center",
   },
-  avatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
-  avatarText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: { 
-    color: "#6B4C7A", 
-    fontSize: 18, 
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    color: "#B19BC8",
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  headerAction: {
-    padding: 4,
-  },
-  messagesList: { 
-    padding: 16, 
-    paddingBottom: 100,
-  },
-  messageWrapper: { 
-    flexDirection: "row", 
-    alignItems: "flex-end", 
-    marginVertical: 6,
-  },
-  myMessageWrapper: { 
-    justifyContent: "flex-end",
-  },
-  theirMessageWrapper: { 
-    justifyContent: "flex-start",
-  },
-  avatarSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#D4B5E8",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-    marginBottom: 2,
-  },
-  avatarSmallText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  messageBubble: { 
-    maxWidth: "75%", 
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#C8A2C8",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  myBubble: { 
-    backgroundColor: "#C8A2C8",
-    borderBottomRightRadius: 8,
-  },
-  theirBubble: { 
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderBottomLeftRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "rgba(212, 181, 232, 0.5)",
-  },
-  messageText: { 
-    fontSize: 15, 
-    color: "#6B4C7A",
-    lineHeight: 20,
-    fontWeight: "400",
-  },
-  myMessageText: {
-    color: "#FFFFFF",
-  },
-  messageImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 16,
-    marginBottom: 8,
-  },
-  typingIndicator: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  typingBubble: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    borderWidth: 1.5,
-    borderColor: "rgba(212, 181, 232, 0.5)",
-  },
-  typingText: {
-    color: "#B19BC8",
-    fontSize: 13,
-    fontStyle: "italic",
-  },
-  inputContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(200, 162, 200, 0.3)",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 28,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    borderWidth: 1.5,
-    borderColor: "rgba(212, 181, 232, 0.5)",
-  },
-  photoButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 4,
-    backgroundColor: "rgba(232, 213, 242, 0.5)",
-  },
-  input: { 
-    flex: 1, 
-    backgroundColor: "transparent",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    fontSize: 15,
-    color: "#6B4C7A",
-    maxHeight: 100,
-    ...Platform.select({
-      ios: {
-        paddingTop: 10,
-      },
-    }),
-  },
-  sendButton: { 
-    backgroundColor: "#C8A2C8",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 4,
-    shadowColor: "#C8A2C8",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    backgroundColor: "#E8D5F2",
-  },
+  avatarImage: { width: 42, height: 42, borderRadius: 21 },
+  avatarText: { color: "#FFFFFF", fontSize: 18, fontWeight: "600" },
+  headerInfo: { flex: 1 },
+  headerTitle: { color: "#6B4C7A", fontSize: 18, fontWeight: "700", letterSpacing: -0.3 },
+  headerSubtitle: { color: "#B19BC8", fontSize: 13, marginTop: 2, fontWeight: "500" },
+  headerAction: { padding: 4 },
+  messagesList: { padding: 16, paddingBottom: 100 },
+  messageWrapper: { flexDirection: "row", alignItems: "flex-end", marginVertical: 6 },
+  myMessageWrapper: { justifyContent: "flex-end" },
+  theirMessageWrapper: { justifyContent: "flex-start" },
+  avatarSmall: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#D4B5E8", justifyContent: "center", alignItems: "center", marginRight: 8, marginBottom: 2 },
+  avatarSmallText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
+  messageBubble: { maxWidth: "75%", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, ...Platform.select({ ios: { shadowColor: "#C8A2C8", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 }, android: { elevation: 3 }, }) },
+  myBubble: { backgroundColor: "#C8A2C8", borderBottomRightRadius: 8 },
+  theirBubble: { backgroundColor: "rgba(255, 255, 255, 0.95)", borderBottomLeftRadius: 8, borderWidth: 1.5, borderColor: "rgba(212, 181, 232, 0.5)" },
+  messageText: { fontSize: 15, color: "#6B4C7A", lineHeight: 20, fontWeight: "400" },
+  myMessageText: { color: "#FFFFFF" },
+  messageImage: { width: 200, height: 200, borderRadius: 16, marginBottom: 8 },
+  typingIndicator: { paddingHorizontal: 16, paddingVertical: 8 },
+  typingBubble: { backgroundColor: "rgba(255, 255, 255, 0.9)", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, alignSelf: "flex-start", borderWidth: 1.5, borderColor: "rgba(212, 181, 232, 0.5)" },
+  typingText: { color: "#B19BC8", fontSize: 13, fontStyle: "italic" },
+  inputContainer: { backgroundColor: "rgba(255, 255, 255, 0.95)", borderTopWidth: 1, borderTopColor: "rgba(200, 162, 200, 0.3)", paddingVertical: 12, paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 12 },
+  inputWrapper: { flexDirection: "row", alignItems: "flex-end", backgroundColor: "rgba(255, 255, 255, 0.9)", borderRadius: 28, paddingHorizontal: 4, paddingVertical: 4, borderWidth: 1.5, borderColor: "rgba(212, 181, 232, 0.5)" },
+  photoButton: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", marginRight: 4, backgroundColor: "rgba(232, 213, 242, 0.5)" },
+  input: { flex: 1, backgroundColor: "transparent", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, fontSize: 15, color: "#6B4C7A", maxHeight: 100, ...Platform.select({ ios: { paddingTop: 10 } }) },
+  sendButton: { backgroundColor: "#C8A2C8", width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", marginLeft: 4, shadowColor: "#C8A2C8", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  sendButtonDisabled: { backgroundColor: "#E8D5F2" },
 });
