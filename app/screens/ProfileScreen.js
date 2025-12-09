@@ -1,7 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { ref as dbRef, get, remove, update } from 'firebase/database';
-import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -14,10 +13,14 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    ActivityIndicator
 } from 'react-native';
-import { auth, db, storage } from '../../firebase/config';
+import { auth, db, supabase} from '../../firebase/config';
 
+
+
+ 
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState({
@@ -88,7 +91,7 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,

@@ -22,11 +22,12 @@ const firebaseConfig = {
 
 const supabaseUrl = 'https://wcqusrcbbierfrmkptfa.supabase.co'
 const supabaseKey = 'sb_publishable_Dy4EcC50WwauaJ2vy-u0Zw_rPXfNt7C'
-const supabase = createClient(supabaseUrl, supabaseKey)
+// const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Initialize Firebase
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
+export const supabase = createClient(supabaseUrl, supabaseKey)
 export default {app , supabase} ;
