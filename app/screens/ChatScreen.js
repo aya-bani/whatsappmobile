@@ -104,38 +104,57 @@ export default function ChatScreen({ route, navigation }) {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Permission to access gallery is required!');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      uploadImage(result.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Permission to access gallery is required!');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const uploadImage = async (imageUri) => {
     setUploading(true);
     try {
+      // Fetch the image as a blob
       const response = await fetch(imageUri);
       const blob = await response.blob();
-      const fileRef = storageRef(storage, `chat-images/${chatId}/${Date.now()}.jpg`);
+      
+      // Create a unique filename
+      const filename = `chat-images/${chatId}/${Date.now()}.jpg`;
+      const fileRef = storageRef(storage, filename);
+      
+      // Upload the blob
       await uploadBytes(fileRef, blob);
+      
+      // Get the download URL
       const imageUrl = await getDownloadURL(fileRef);
       
+      // Save message with image URL to database
       const messagesRef = ref(db, `chats/${chatId}/messages`);
       await push(messagesRef, {
         imageUrl: imageUrl,
         sender: user.uid,
         createdAt: serverTimestamp(),
       });
+      
+      Alert.alert('Success', 'Image sent successfully!');
     } catch (error) {
       console.error('Upload error:', error);
+      Alert.alert('Upload Error', error.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -157,13 +176,13 @@ export default function ChatScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={styles.headerAvatar}>
           {chatUser?.profileImage ? (
+            <Image source={{ uri: chatUser.profileImage }} style={styles.avatarImage} />
+          ) : (
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>
                 {(chatUser?.name ?? chatUser?.pseudo ?? "?")[0].toUpperCase()}
               </Text>
             </View>
-          ) : (
-            <Ionicons name="person-circle" size={42} color="#6366F1" />
           )}
         </View>
         <View style={styles.headerInfo}>
@@ -305,6 +324,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#C8A2C8",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
   },
   avatarText: {
     color: "#FFFFFF",
@@ -479,4 +503,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8D5F2",
   },
 });
- 

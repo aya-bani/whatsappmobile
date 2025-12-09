@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
-import { signOut } from 'firebase/auth';
+import { signOut, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { ref as dbRef, get, remove, update } from 'firebase/database';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -16,7 +16,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { auth, db } from '../../firebase/config';
+import { auth, db, storage } from '../../firebase/config';
+
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState({
@@ -28,20 +29,40 @@ export default function ProfileScreen({ navigation }) {
   });
   const [uploading, setUploading] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [isActive, setIsActive] = useState(false);
-  const [image,setImage]=useState();
 
-  const uploadimageToSupabase = async (localURL)=> {
-    const reponse = await fetch(localURL);
-    const blob = await reponse.blob();
-    const arraybuffer =  await new Response(blob).arrayBuffer();
-    supabase.storage.from('les_images_de_profil').upload(currentUser.uid+ 'jpg',arraybuffer, {
-      upsert: true,
-    });
-    const {data} = supabase.storage.from('les_images_de_profil').getPublicUrl(currentUser.uid+'jpg');
-    return data.publicUrl;
-  }
+  // Function to upload image to Supabase
+  const uploadImageToSupabase = async (localURL) => {
+    try {
+      const response = await fetch(localURL);
+      const blob = await response.blob();
+      const arraybuffer = await new Response(blob).arrayBuffer();
+      
+      const fileName = `${auth.currentUser.uid}.jpg`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('les_images_de_profil')
+        .upload(fileName, arraybuffer, {
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('les_images_de_profil')
+        .getPublicUrl(fileName);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Supabase upload error:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const userRef = dbRef(db, `users/${auth.currentUser.uid}`);
@@ -67,29 +88,33 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 1,
+      quality: 0.8,
     });
-    if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-      uploadProfilePicture(imageUri);
+    
+    if (!result.canceled && result.assets[0].uri) {
+      uploadProfilePicture(result.assets[0].uri);
     }
   };
 
   const uploadProfilePicture = async (imageUri) => {
     setUploading(true);
     try {
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-      const fileRef = storageRef(db, `profile-pictures/profile-${auth.currentUser.uid}.jpg`);
-      await uploadBytes(fileRef, blob);
-      const imageUrl = await getDownloadURL(fileRef);
-      await update(dbRef(db, `users/${auth.currentUser.uid}`), { profileImage: imageUrl });
+      // Upload to Supabase
+      const imageUrl = await uploadImageToSupabase(imageUri);
+      
+      // Update Firebase database with new image URL
+      await update(dbRef(db, `users/${auth.currentUser.uid}`), { 
+        profileImage: imageUrl 
+      });
+      
       setUserData({ ...userData, profileImage: imageUrl });
+      Alert.alert('Success', 'Profile picture uploaded successfully!');
     } catch (error) {
-      Alert.alert('Upload Error', error.message);
+      console.error('Upload error:', error);
+      Alert.alert('Upload Error', error.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -109,7 +134,6 @@ export default function ProfileScreen({ navigation }) {
     try {
       await update(dbRef(db, `users/${auth.currentUser.uid}`), {
         name: userData.name,
-        
         pseudo: userData.pseudo,
         phone: userData.phone,
       });
@@ -121,29 +145,53 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleDeleteProfile = () => {
-    Alert.alert(
-      "Delete Profile",
-      "Are you sure you want to delete your profile? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await remove(dbRef(db, `users/${auth.currentUser.uid}`));
-              await auth.currentUser.delete();
-              navigation.reset({ routes: [{ name: 'Login' }] });
-            } catch (error) {
-              Alert.alert("Error", "Failed to delete profile: " + error.message);
-            }
-          }
-        }
-      ]
-    );
+    setIsDeleteModalVisible(true);
   };
 
- 
+  const confirmDeleteProfile = async () => {
+    if (!deletePassword.trim()) {
+      Alert.alert('Error', 'Please enter your password');
+      return;
+    }
+
+    try {
+      // Reauthenticate user with password
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email,
+        deletePassword
+      );
+      
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
+      // Delete from Supabase storage (optional)
+      try {
+        await supabase.storage
+          .from('les_images_de_profil')
+          .remove([`${auth.currentUser.uid}.jpg`]);
+      } catch (storageError) {
+        console.log('Storage deletion error:', storageError);
+        // Continue even if storage deletion fails
+      }
+      
+      // Delete from Firebase Realtime Database
+      await remove(dbRef(db, `users/${auth.currentUser.uid}`));
+      
+      // Delete Firebase Auth account
+      await auth.currentUser.delete();
+      
+      setIsDeleteModalVisible(false);
+      setDeletePassword('');
+      navigation.reset({ routes: [{ name: 'Login' }] });
+      
+    } catch (error) {
+      console.error('Delete error:', error);
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        Alert.alert('Error', 'Incorrect password. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to delete profile: ' + error.message);
+      }
+    }
+  };
 
   return (
     <ImageBackground 
@@ -154,54 +202,109 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.overlay} />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.profileContainer}>
-        <TouchableOpacity onPress={pickImage}>
-          {userData.profileImage ? (
-            <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
-          ) : (
-            <View style={styles.uploadButton}>
-              <Text style={styles.uploadText}>Upload</Text>
+          <TouchableOpacity onPress={pickImage} disabled={uploading}>
+            {userData.profileImage ? (
+              <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.uploadButton}>
+                <Text style={styles.uploadText}>Upload</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {uploading && (
+            <View style={styles.uploadingContainer}>
+              <ActivityIndicator size="small" color="#C8A2C8" />
+              <Text style={styles.uploadingText}>Uploading...</Text>
             </View>
           )}
-        </TouchableOpacity>
-        {uploading && <Text style={styles.uploadingText}>Uploading...</Text>}
 
-        <Text style={styles.profileText}>Name: {userData.name}</Text>
-        <Text style={styles.profileText}>Email: {userData.email}</Text>
-        <Text style={styles.profileText}>Phone: {userData.phone}</Text>
-        <Text style={styles.profileText}>Pseudo: {userData.pseudo}</Text>
+          <Text style={styles.profileText}>Name: {userData.name}</Text>
+          <Text style={styles.profileText}>Email: {userData.email}</Text>
+          <Text style={styles.profileText}>Phone: {userData.phone}</Text>
+          <Text style={styles.profileText}>Pseudo: {userData.pseudo}</Text>
 
-        <View style={styles.buttonRow}>
-  <TouchableOpacity style={styles.editButton} onPress={() => setIsEditModalVisible(true)}>
-    <Text style={styles.buttonText}>Edit</Text>
-  </TouchableOpacity>
-  
-  <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteProfile}>
-    <Text style={styles.buttonText}>Delete</Text>
-  </TouchableOpacity>
-  
-  <TouchableOpacity style={styles.logoutButtonInline} onPress={handleLogout}>
-    <Text style={styles.buttonText}>Logout</Text>
-  </TouchableOpacity>
-</View>
-
-
-       
-      </View>
-
-      <Modal visible={isEditModalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TextInput style={styles.input} placeholder="Name" value={userData.name} onChangeText={(text) => setUserData({ ...userData, name: text })}/>
-            <TextInput style={styles.input} placeholder="Phone" value={userData.phone} onChangeText={(text) => setUserData({ ...userData, phone: text })}/>
-            <TextInput style={styles.input} placeholder="Pseudo" value={userData.pseudo} onChangeText={(text) => setUserData({ ...userData, pseudo: text })}/>
-            <View style={styles.modalButtonRow}>
-              <Button title="Save" color="#C8A2C8" onPress={handleEditProfile}/>
-              <Button title="Cancel" color="#B19BC8" onPress={() => setIsEditModalVisible(false)}/>
-            </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditModalVisible(true)}>
+              <Text style={styles.buttonText}>Edit</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteProfile}>
+              <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.logoutButtonInline} onPress={handleLogout}>
+              <Text style={styles.buttonText}>Logout</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+
+        {/* Edit Profile Modal */}
+        <Modal visible={isEditModalVisible} animationType="slide" transparent={true}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Name" 
+                value={userData.name} 
+                onChangeText={(text) => setUserData({ ...userData, name: text })}
+              />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Phone" 
+                value={userData.phone} 
+                onChangeText={(text) => setUserData({ ...userData, phone: text })}
+              />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Pseudo" 
+                value={userData.pseudo} 
+                onChangeText={(text) => setUserData({ ...userData, pseudo: text })}
+              />
+              <View style={styles.modalButtonRow}>
+                <Button title="Save" color="#C8A2C8" onPress={handleEditProfile}/>
+                <Button title="Cancel" color="#B19BC8" onPress={() => setIsEditModalVisible(false)}/>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Delete Profile Modal */}
+        <Modal visible={isDeleteModalVisible} animationType="fade" transparent={true}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Delete Profile</Text>
+              <Text style={styles.warningText}>
+                Are you sure you want to delete your profile? This action cannot be undone.
+              </Text>
+              <Text style={styles.passwordLabel}>Enter your password to confirm:</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Password" 
+                value={deletePassword} 
+                onChangeText={setDeletePassword}
+                secureTextEntry={true}
+                autoCapitalize="none"
+              />
+              <View style={styles.modalButtonRow}>
+                <Button 
+                  title="Delete" 
+                  color="#E8A5C8" 
+                  onPress={confirmDeleteProfile}
+                />
+                <Button 
+                  title="Cancel" 
+                  color="#B19BC8" 
+                  onPress={() => {
+                    setIsDeleteModalVisible(false);
+                    setDeletePassword('');
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </ImageBackground>
   );
@@ -237,7 +340,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(212, 181, 232, 0.5)',
   },
-
   profileImage: {
     width: 140,
     height: 140,
@@ -246,7 +348,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'rgba(212, 181, 232, 0.6)',
   },
-
   uploadButton: {
     width: 140,
     height: 140,
@@ -258,7 +359,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'rgba(212, 181, 232, 0.6)',
   },
-
   uploadText: {
     color: '#FFFFFF',
     fontWeight: '700',
@@ -266,14 +366,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.5,
   },
-
+  uploadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   uploadingText: {
     color: '#C8A2C8',
     fontWeight: '600',
-    marginBottom: 12,
+    marginLeft: 8,
     fontSize: 14,
   },
-
   profileText: {
     fontSize: 16,
     marginBottom: 12,
@@ -283,7 +386,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     paddingHorizontal: 4,
   },
-
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -291,7 +393,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 8,
   },
-
   editButton: {
     flex: 1,
     backgroundColor: '#C8A2C8',
@@ -303,7 +404,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
   deleteButton: {
     flex: 1,
     backgroundColor: '#E8A5C8',
@@ -315,7 +415,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
   logoutButtonInline: {
     flex: 1,
     backgroundColor: '#B19BC8',
@@ -327,7 +426,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
   buttonText: {
     color: '#fff',
     fontWeight: '700',
@@ -335,33 +433,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 0.3,
   },
-
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 25,
-    padding: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(212, 181, 232, 0.5)',
-  },
-
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B4C7A',
-  },
-
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(107, 76, 122, 0.5)',
   },
-
   modalContainer: {
     width: '85%',
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -375,7 +452,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(212, 181, 232, 0.5)',
   },
-
   modalTitle: {
     fontSize: 24,
     fontWeight: '800',
@@ -384,7 +460,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.5,
   },
-
+  warningText: {
+    fontSize: 14,
+    color: '#E8A5C8',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  passwordLabel: {
+    fontSize: 14,
+    color: '#6B4C7A',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
   input: {
     width: '100%',
     height: 52,
@@ -398,26 +486,10 @@ const styles = StyleSheet.create({
     color: '#6B4C7A',
     fontWeight: '500',
   },
-
   modalButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
     gap: 12,
-  },
-
-  logoutButton: {
-    backgroundColor: '#B19BC8',
-    padding: 14,
-    borderRadius: 16,
-    width: '100%',
-    marginTop: 16,
-  },
-
-  logoutText: {
-    color: '#fff',
-    fontWeight: '700',
-    textAlign: 'center',
-    fontSize: 16,
   },
 });
